@@ -3,15 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>OMNI-CHRONO | 2026 PROTOCOL</title>
+    <title>NEURAL-CHRONO // 2026 PROTOCOL</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=JetBrains+Mono:wght@100;400&display=swap" rel="stylesheet">
     <style>
         :root {
             --accent: #00f2fe;
             --danger: #ff0055;
-            --warning: #f2ff00;
-            --bg: #050508;
+            --gold: #ffcc00;
+            --bg: #020205;
         }
 
         body, html {
@@ -23,261 +23,342 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            perspective: 1000px;
+            perspective: 1200px;
         }
 
-        canvas#particles {
+        /* Layered Backgrounds */
+        canvas#background-canvas {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 0;
+            z-index: 1;
         }
 
-        #hud-container {
+        /* CRT Scanline Effect Overlay */
+        .scanlines {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+            background-size: 100% 3px, 3px 100%;
+            z-index: 100; pointer-events: none;
+        }
+
+        /* Ultra HUD Container */
+        #hud-frame {
             position: relative;
             z-index: 10;
-            width: 900px;
-            height: 600px;
-            background: rgba(0, 242, 254, 0.03);
-            border: 1px solid rgba(0, 242, 254, 0.2);
-            backdrop-filter: blur(15px);
+            width: 950px;
+            height: 650px;
+            background: rgba(0, 242, 254, 0.02);
+            border: 1px solid rgba(0, 242, 254, 0.3);
+            backdrop-filter: blur(20px);
             display: flex;
             flex-direction: column;
-            padding: 30px;
-            box-shadow: 0 0 100px rgba(0,0,0,1);
-            transition: transform 0.1s ease-out;
+            padding: 40px;
+            box-shadow: 0 0 100px rgba(0,0,0,1), inset 0 0 50px rgba(0, 242, 254, 0.05);
             transform-style: preserve-3d;
+            transition: transform 0.1s ease-out;
+            clip-path: polygon(0 5%, 5% 0, 95% 0, 100% 5%, 100% 95%, 95% 100%, 5% 100%, 0 95%);
         }
 
-        .main-grid {
-            display: grid;
-            grid-template-columns: 1fr 2fr 1fr;
-            gap: 20px;
-            flex-grow: 1;
-        }
-
-        .module {
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            padding: 15px;
+        .header-row {
             display: flex;
-            flex-direction: column;
             justify-content: space-between;
-            position: relative;
-            overflow: hidden;
+            border-bottom: 1px solid rgba(0, 242, 254, 0.2);
+            padding-bottom: 10px;
+            margin-bottom: 30px;
         }
 
         .label {
-            font-size: 0.6rem;
+            font-size: 0.65rem;
             color: var(--accent);
+            letter-spacing: 4px;
             text-transform: uppercase;
-            letter-spacing: 2px;
-            border-bottom: 1px solid var(--accent);
-            padding-bottom: 5px;
-            margin-bottom: 10px;
         }
 
-        /* Digital Center Clock */
-        .center-clock {
+        /* Main Content Grid */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            gap: 30px;
+            flex-grow: 1;
+        }
+
+        /* Analog Clock (User Original Logic Base) */
+        .analog-mini {
+            width: 150px; height: 150px;
+            border: 2px solid rgba(255,255,255,0.1);
+            border-radius: 50%;
+            position: relative;
+            margin: 20px auto;
+        }
+        .hand {
+            position: absolute; bottom: 50%; left: 50%;
+            transform-origin: bottom center;
+            background: white; border-radius: 5px;
+        }
+        #sec-hand { width: 1px; height: 60px; background: var(--danger); z-index: 10; }
+        #min-hand { width: 3px; height: 50px; background: var(--accent); z-index: 8; }
+        #hor-hand { width: 5px; height: 35px; background: #fff; z-index: 6; }
+
+        /* Central Digital Display */
+        .center-display {
+            display: flex;
+            flex-direction: column;
             justify-content: center;
             align-items: center;
             text-align: center;
         }
 
-        .main-time {
+        #digital-time {
             font-family: 'Orbitron', sans-serif;
-            font-size: 6rem;
+            font-size: 7rem;
             font-weight: 900;
-            text-shadow: 0 0 30px var(--accent);
-            margin: 0;
+            color: white;
+            text-shadow: 0 0 40px var(--accent);
+            line-height: 1;
         }
 
-        /* New Year Countdown Module */
-        .countdown-strip {
-            margin-top: 20px;
-            background: rgba(255, 0, 85, 0.1);
-            border: 1px solid var(--danger);
-            padding: 20px;
-            text-align: center;
-            position: relative;
-        }
-
-        .countdown-timer {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 2.5rem;
+        #milliseconds {
+            font-size: 2rem;
             color: var(--danger);
-            text-shadow: 0 0 15px var(--danger);
-            letter-spacing: 5px;
+            margin-left: 10px;
         }
 
-        .protocol-active {
-            animation: pulse-red 1s infinite alternate;
+        /* Battery & Telemetry */
+        .status-box {
+            background: rgba(255,255,255,0.03);
+            padding: 15px;
+            border: 1px solid rgba(255,255,255,0.05);
+            margin-top: 20px;
         }
 
-        @keyframes pulse-red {
-            from { opacity: 0.6; }
-            to { opacity: 1; text-shadow: 0 0 25px var(--danger); }
+        .bar-outer { width: 100%; height: 4px; background: rgba(255,255,255,0.1); margin-top: 10px; }
+        .bar-inner { height: 100%; background: var(--accent); width: 0%; box-shadow: 0 0 10px var(--accent); transition: 0.5s; }
+
+        /* Countdown Strip */
+        .new-year-strip {
+            margin-top: 40px;
+            background: linear-gradient(90deg, rgba(255,0,85,0) 0%, rgba(255,0,85,0.1) 50%, rgba(255,0,85,0) 100%);
+            border-top: 1px solid var(--danger);
+            border-bottom: 1px solid var(--danger);
+            padding: 25px;
+            text-align: center;
         }
 
-        /* Battery & Utils */
-        .bar-container {
-            width: 100%;
-            height: 6px;
-            background: rgba(255,255,255,0.1);
-            margin-top: 5px;
-        }
-        .bar-fill {
-            height: 100%;
-            background: var(--accent);
-            width: 0%;
-            transition: width 0.5s;
+        #countdown-clock {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 3.5rem;
+            color: var(--danger);
+            text-shadow: 0 0 20px var(--danger);
+            animation: pulse 1s infinite alternate;
         }
 
-        .scan-line {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 4px;
-            background: rgba(0, 242, 254, 0.1);
-            box-shadow: 0 0 15px var(--accent);
-            animation: scan 6s linear infinite;
-            z-index: 100;
+        @keyframes pulse {
+            from { opacity: 0.7; transform: scale(0.98); }
+            to { opacity: 1; transform: scale(1); }
         }
 
-        @keyframes scan {
-            0% { top: 0; }
-            100% { top: 100%; }
+        .binary-scroller {
+            font-size: 0.6rem;
+            color: rgba(255,255,255,0.2);
+            margin-top: 10px;
+            white-space: nowrap;
+            overflow: hidden;
         }
     </style>
 </head>
 <body>
 
-<canvas id="particles"></canvas>
+<canvas id="background-canvas"></canvas>
+<div class="scanlines"></div>
 
-<div id="hud-container">
-    <div class="scan-line"></div>
+<div id="hud-frame">
+    <div class="header-row">
+        <div class="label" id="system-id">CORE_OS_V4.0 // ACTIVE</div>
+        <div class="label" id="current-date-header">31 DEC 2025</div>
+    </div>
 
-    <div class="main-grid">
-        <div class="module">
-            <div>
-                <div class="label">System Calendar</div>
-                <div id="day-full">WEDNESDAY</div>
-                <div id="date-full" style="font-size: 1.8rem; color: var(--accent);">31 DEC</div>
-                <div id="year-full">2025</div>
+    <div class="main-layout">
+        <div class="side-panel">
+            <div class="label">Mechanical Sync</div>
+            <div class="analog-mini">
+                <div class="hand" id="hor-hand"></div>
+                <div class="hand" id="min-hand"></div>
+                <div class="hand" id="sec-hand"></div>
             </div>
-            <div>
-                <div class="label">Hardware Energy</div>
-                <div id="battery-status" style="font-size: 0.7rem;">OPTIMIZING...</div>
-                <div class="bar-container"><div id="battery-fill" class="bar-fill"></div></div>
+            <div class="status-box">
+                <div class="label">Power Reserve</div>
+                <div id="bat-val" style="font-size: 1.2rem;">--%</div>
+                <div class="bar-outer"><div id="bat-fill" class="bar-inner"></div></div>
             </div>
         </div>
 
-        <div class="module center-clock">
-            <div class="label">Atomic Core Clock</div>
-            <h1 class="main-time" id="clock-main">17:50</h1>
-            <div id="sec-readout" style="color: var(--danger); font-size: 1.5rem;">17</div>
-            <div style="font-size: 0.6rem; margin-top: 15px; opacity: 0.5;">SIGNAL: STABLE // 2.4GHz</div>
+        <div class="center-display">
+            <div class="label">Precision Atomic Time</div>
+            <div style="display: flex; align-items: flex-end;">
+                <span id="digital-time">00:00:00</span>
+                <span id="milliseconds">.000</span>
+            </div>
+            <div class="binary-scroller" id="binary">010101010101010101010101</div>
         </div>
 
-        <div class="module">
-            <div>
-                <div class="label">Coordinates</div>
-                <div style="font-size: 0.7rem; color: var(--warning);">DURBAN, ZA</div>
-                <div style="font-size: 0.6rem;">LAT: -29.8587<br>LONG: 31.0218</div>
+        <div class="side-panel">
+            <div class="label">Geospatial Data</div>
+            <div style="margin-top: 10px; font-size: 0.8rem;">
+                <span style="color: var(--accent);">LOC:</span> DURBAN, ZA<br>
+                <span style="color: var(--accent);">LAT:</span> -29.8587<br>
+                <span style="color: var(--accent);">LNG:</span> 31.0218
             </div>
-            <div>
-                <div class="label">Protocol Status</div>
-                <div style="font-size: 0.8rem; color: var(--danger);">PRE-ACCESS 2026</div>
-                <div style="font-size: 0.5rem; opacity: 0.5;">DECRYPTING NEXT_GEN_EPOCH...</div>
+            <div class="status-box" style="border-color: var(--danger);">
+                <div class="label" style="color: var(--danger);">Year Protocol</div>
+                <div id="year-status">2025 // TERMINATING</div>
+                <div class="bar-outer"><div id="year-progress" class="bar-inner" style="background: var(--danger); width: 99.9%;"></div></div>
             </div>
         </div>
     </div>
 
-    <div class="countdown-strip">
-        <div class="label" style="border: none; color: var(--danger);">Mission Countdown: New Year 2026</div>
-        <div class="countdown-timer protocol-active" id="countdown">00:00:00:00</div>
-        <div style="font-size: 0.6rem; color: var(--danger); margin-top: 5px; letter-spacing: 2px;">T-MINUS UNTIL GLOBAL RESET</div>
+    <div class="new-year-strip">
+        <div class="label" style="border: none; color: var(--danger); margin-bottom: 5px;">T-Minus to 2026 Epoch</div>
+        <div id="countdown-clock">00:00:00:00</div>
     </div>
 </div>
 
 <script>
 $(document).ready(function() {
-    // 1. Particle Background
-    const canvas = document.getElementById('particles');
+    const canvas = document.getElementById('background-canvas');
     const ctx = canvas.getContext('2d');
-    let pArray = [];
-    function init() {
-        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-        for(let i=0; i<80; i++) pArray.push({x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: Math.random()*2});
-    }
-    function animateP() {
-        ctx.clearRect(0,0,canvas.width, canvas.height);
-        ctx.fillStyle = "rgba(0, 242, 254, 0.3)";
-        pArray.forEach(p => {
-            ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
-            p.y -= 0.3; if(p.y < 0) p.y = canvas.height;
-        });
-        requestAnimationFrame(animateP);
-    }
-    init(); animateP();
+    let particles = [];
+    let fireworks = [];
 
-    // 2. 3D Tilt
+    // 1. Initialize Canvas Environment
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    // 2. Fireworks System (Ultra Feature)
+    class Firework {
+        constructor() {
+            this.x = Math.random() * canvas.width;
+            this.y = canvas.height;
+            this.targetY = Math.random() * (canvas.height / 2);
+            this.color = `hsl(${Math.random() * 360}, 100%, 50%)`;
+            this.speed = 5;
+            this.particles = [];
+            this.exploded = false;
+        }
+        update() {
+            if (!this.exploded) {
+                this.y -= this.speed;
+                if (this.y <= this.targetY) {
+                    this.exploded = true;
+                    for(let i=0; i<30; i++) this.particles.push(new Spark(this.x, this.y, this.color));
+                }
+            } else {
+                this.particles.forEach((p, i) => {
+                    p.update();
+                    if (p.alpha <= 0) this.particles.splice(i, 1);
+                });
+            }
+        }
+        draw() {
+            if (!this.exploded) {
+                ctx.fillStyle = this.color;
+                ctx.fillRect(this.x, this.y, 3, 3);
+            } else {
+                this.particles.forEach(p => p.draw());
+            }
+        }
+    }
+
+    class Spark {
+        constructor(x, y, color) {
+            this.x = x; this.y = y; this.color = color;
+            this.vx = (Math.random() - 0.5) * 6;
+            this.vy = (Math.random() - 0.5) * 6;
+            this.alpha = 1;
+        }
+        update() { this.x += this.vx; this.y += this.vy; this.alpha -= 0.01; }
+        draw() {
+            ctx.globalAlpha = this.alpha;
+            ctx.fillStyle = this.color;
+            ctx.beginPath(); ctx.arc(this.x, this.y, 2, 0, Math.PI*2); ctx.fill();
+            ctx.globalAlpha = 1;
+        }
+    }
+
+    // 3. 3D Mouse Parallax
     $(document).on('mousemove', function(e) {
-        let x = -(window.innerWidth / 2 - e.pageX) / 50;
-        let y = (window.innerHeight / 2 - e.pageY) / 50;
-        $('#hud-container').css('transform', `rotateY(${x}deg) rotateX(${y}deg)`);
+        let x = -(window.innerWidth / 2 - e.pageX) / 60;
+        let y = (window.innerHeight / 2 - e.pageY) / 60;
+        $('#hud-frame').css('transform', `rotateY(${x}deg) rotateX(${y}deg)`);
     });
 
-    // 3. Clock & Countdown Logic
-    function updateSystems() {
+    // 4. Core Logic Loop
+    function update() {
         const now = new Date();
         
-        // Main Clock
-        $('#clock-main').text(String(now.getHours()).padStart(2, '0') + ":" + String(now.getMinutes()).padStart(2, '0'));
-        $('#sec-readout').text(String(now.getSeconds()).padStart(2, '0'));
+        // --- YOUR ORIGINAL LOGIC (Enhanced) ---
+        const s = now.getSeconds();
+        const m = now.getMinutes();
+        const h = now.getHours();
+        const ms = now.getMilliseconds();
 
-        // Calendar
-        const days = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
-        const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
-        $('#day-full').text(days[now.getDay()]);
-        $('#date-full').text(now.getDate() + " " + months[now.getMonth()]);
-        $('#year-full').text(now.getFullYear());
+        // Analog rotations
+        $("#sec-hand").css("transform", `rotate(${s * 6}deg)`);
+        $("#min-hand").css("transform", `rotate(${m * 6}deg)`);
+        $("#hor-hand").css("transform", `rotate(${(h % 12) * 30 + m / 2}deg)`);
+
+        // --- ULTRA DIGITAL INTERFACE ---
+        $('#digital-time').text(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`);
+        $('#milliseconds').text(`.${String(ms).padStart(3, '0')}`);
+        $('#current-date-header').text(now.toDateString().toUpperCase());
+        $('#binary').text(now.getTime().toString(2));
 
         // --- NEW YEAR COUNTDOWN ---
-        const nextYear = 2026;
-        const target = new Date(`Jan 1, ${nextYear} 00:00:00`).getTime();
+        const target = new Date("Jan 1, 2026 00:00:00").getTime();
         const diff = target - now.getTime();
 
         if (diff > 0) {
-            const d = Math.floor(diff / (1000 * 60 * 60 * 24));
-            const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            const s = Math.floor((diff % (1000 * 60)) / 1000);
-            
-            $('#countdown').text(
-                `${String(d).padStart(2, '0')}:${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
-            );
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const secs = Math.floor((diff % (1000 * 60)) / 1000);
+            $('#countdown-clock').text(`${String(days).padStart(2, '0')}:${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`);
         } else {
-            $('#countdown').text("WELCOME TO 2026");
-            $('.countdown-strip').css('background', 'rgba(0, 242, 254, 0.2)').css('border-color', 'var(--accent)');
-            $('#countdown').css('color', 'var(--accent)');
+            // NEW YEAR TRIGGER
+            $('#countdown-clock').text("WELCOME TO 2026").css('color', 'var(--accent)');
+            if (Math.random() < 0.05) fireworks.push(new Firework()); // Launch fireworks
         }
 
-        requestAnimationFrame(updateSystems);
+        // --- BACKGROUND ANIMATION ---
+        ctx.fillStyle = 'rgba(2, 2, 5, 0.2)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        fireworks.forEach((fw, i) => {
+            fw.update(); fw.draw();
+            if (fw.exploded && fw.particles.length === 0) fireworks.splice(i, 1);
+        });
+
+        requestAnimationFrame(update);
     }
 
-    // 4. Battery Telemetry
+    // 5. Battery Telemetry
     if (navigator.getBattery) {
         navigator.getBattery().then(bat => {
-            const updateBat = () => {
-                let per = Math.floor(bat.level * 100);
-                $('#battery-fill').css('width', per + '%');
-                $('#battery-status').text(`${per}% // ${bat.charging ? "INPUT_ACTIVE" : "INTERNAL_CELL"}`);
+            const up = () => {
+                let p = Math.floor(bat.level * 100);
+                $('#bat-val').text(p + '%');
+                $('#bat-fill').css('width', p + '%');
             };
-            updateBat();
-            bat.onlevelchange = updateBat;
-            bat.onchargingchange = updateBat;
+            up(); bat.onlevelchange = up;
         });
     }
 
-    updateSystems();
+    update();
 });
 </script>
+
 </body>
 </html>
