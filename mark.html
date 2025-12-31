@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OMNI-CHRONO | 2026 PROTOCOL</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=JetBrains+Mono:wght@100;400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #00f2fe;
+            --danger: #ff0055;
+            --warning: #f2ff00;
+            --bg: #050508;
+        }
+
+        body, html {
+            margin: 0; padding: 0; height: 100%; width: 100%;
+            background: var(--bg);
+            color: white;
+            font-family: 'JetBrains Mono', monospace;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            perspective: 1000px;
+        }
+
+        canvas#particles {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 0;
+        }
+
+        #hud-container {
+            position: relative;
+            z-index: 10;
+            width: 900px;
+            height: 600px;
+            background: rgba(0, 242, 254, 0.03);
+            border: 1px solid rgba(0, 242, 254, 0.2);
+            backdrop-filter: blur(15px);
+            display: flex;
+            flex-direction: column;
+            padding: 30px;
+            box-shadow: 0 0 100px rgba(0,0,0,1);
+            transition: transform 0.1s ease-out;
+            transform-style: preserve-3d;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 2fr 1fr;
+            gap: 20px;
+            flex-grow: 1;
+        }
+
+        .module {
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .label {
+            font-size: 0.6rem;
+            color: var(--accent);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            border-bottom: 1px solid var(--accent);
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+        }
+
+        /* Digital Center Clock */
+        .center-clock {
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .main-time {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 6rem;
+            font-weight: 900;
+            text-shadow: 0 0 30px var(--accent);
+            margin: 0;
+        }
+
+        /* New Year Countdown Module */
+        .countdown-strip {
+            margin-top: 20px;
+            background: rgba(255, 0, 85, 0.1);
+            border: 1px solid var(--danger);
+            padding: 20px;
+            text-align: center;
+            position: relative;
+        }
+
+        .countdown-timer {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.5rem;
+            color: var(--danger);
+            text-shadow: 0 0 15px var(--danger);
+            letter-spacing: 5px;
+        }
+
+        .protocol-active {
+            animation: pulse-red 1s infinite alternate;
+        }
+
+        @keyframes pulse-red {
+            from { opacity: 0.6; }
+            to { opacity: 1; text-shadow: 0 0 25px var(--danger); }
+        }
+
+        /* Battery & Utils */
+        .bar-container {
+            width: 100%;
+            height: 6px;
+            background: rgba(255,255,255,0.1);
+            margin-top: 5px;
+        }
+        .bar-fill {
+            height: 100%;
+            background: var(--accent);
+            width: 0%;
+            transition: width 0.5s;
+        }
+
+        .scan-line {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 4px;
+            background: rgba(0, 242, 254, 0.1);
+            box-shadow: 0 0 15px var(--accent);
+            animation: scan 6s linear infinite;
+            z-index: 100;
+        }
+
+        @keyframes scan {
+            0% { top: 0; }
+            100% { top: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+<canvas id="particles"></canvas>
+
+<div id="hud-container">
+    <div class="scan-line"></div>
+
+    <div class="main-grid">
+        <div class="module">
+            <div>
+                <div class="label">System Calendar</div>
+                <div id="day-full">WEDNESDAY</div>
+                <div id="date-full" style="font-size: 1.8rem; color: var(--accent);">31 DEC</div>
+                <div id="year-full">2025</div>
+            </div>
+            <div>
+                <div class="label">Hardware Energy</div>
+                <div id="battery-status" style="font-size: 0.7rem;">OPTIMIZING...</div>
+                <div class="bar-container"><div id="battery-fill" class="bar-fill"></div></div>
+            </div>
+        </div>
+
+        <div class="module center-clock">
+            <div class="label">Atomic Core Clock</div>
+            <h1 class="main-time" id="clock-main">17:50</h1>
+            <div id="sec-readout" style="color: var(--danger); font-size: 1.5rem;">17</div>
+            <div style="font-size: 0.6rem; margin-top: 15px; opacity: 0.5;">SIGNAL: STABLE // 2.4GHz</div>
+        </div>
+
+        <div class="module">
+            <div>
+                <div class="label">Coordinates</div>
+                <div style="font-size: 0.7rem; color: var(--warning);">DURBAN, ZA</div>
+                <div style="font-size: 0.6rem;">LAT: -29.8587<br>LONG: 31.0218</div>
+            </div>
+            <div>
+                <div class="label">Protocol Status</div>
+                <div style="font-size: 0.8rem; color: var(--danger);">PRE-ACCESS 2026</div>
+                <div style="font-size: 0.5rem; opacity: 0.5;">DECRYPTING NEXT_GEN_EPOCH...</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="countdown-strip">
+        <div class="label" style="border: none; color: var(--danger);">Mission Countdown: New Year 2026</div>
+        <div class="countdown-timer protocol-active" id="countdown">00:00:00:00</div>
+        <div style="font-size: 0.6rem; color: var(--danger); margin-top: 5px; letter-spacing: 2px;">T-MINUS UNTIL GLOBAL RESET</div>
+    </div>
+</div>
+
+<script>
+$(document).ready(function() {
+    // 1. Particle Background
+    const canvas = document.getElementById('particles');
+    const ctx = canvas.getContext('2d');
+    let pArray = [];
+    function init() {
+        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+        for(let i=0; i<80; i++) pArray.push({x: Math.random()*canvas.width, y: Math.random()*canvas.height, r: Math.random()*2});
+    }
+    function animateP() {
+        ctx.clearRect(0,0,canvas.width, canvas.height);
+        ctx.fillStyle = "rgba(0, 242, 254, 0.3)";
+        pArray.forEach(p => {
+            ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill();
+            p.y -= 0.3; if(p.y < 0) p.y = canvas.height;
+        });
+        requestAnimationFrame(animateP);
+    }
+    init(); animateP();
+
+    // 2. 3D Tilt
+    $(document).on('mousemove', function(e) {
+        let x = -(window.innerWidth / 2 - e.pageX) / 50;
+        let y = (window.innerHeight / 2 - e.pageY) / 50;
+        $('#hud-container').css('transform', `rotateY(${x}deg) rotateX(${y}deg)`);
+    });
+
+    // 3. Clock & Countdown Logic
+    function updateSystems() {
+        const now = new Date();
+        
+        // Main Clock
+        $('#clock-main').text(String(now.getHours()).padStart(2, '0') + ":" + String(now.getMinutes()).padStart(2, '0'));
+        $('#sec-readout').text(String(now.getSeconds()).padStart(2, '0'));
+
+        // Calendar
+        const days = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
+        const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+        $('#day-full').text(days[now.getDay()]);
+        $('#date-full').text(now.getDate() + " " + months[now.getMonth()]);
+        $('#year-full').text(now.getFullYear());
+
+        // --- NEW YEAR COUNTDOWN ---
+        const nextYear = 2026;
+        const target = new Date(`Jan 1, ${nextYear} 00:00:00`).getTime();
+        const diff = target - now.getTime();
+
+        if (diff > 0) {
+            const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const s = Math.floor((diff % (1000 * 60)) / 1000);
+            
+            $('#countdown').text(
+                `${String(d).padStart(2, '0')}:${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+            );
+        } else {
+            $('#countdown').text("WELCOME TO 2026");
+            $('.countdown-strip').css('background', 'rgba(0, 242, 254, 0.2)').css('border-color', 'var(--accent)');
+            $('#countdown').css('color', 'var(--accent)');
+        }
+
+        requestAnimationFrame(updateSystems);
+    }
+
+    // 4. Battery Telemetry
+    if (navigator.getBattery) {
+        navigator.getBattery().then(bat => {
+            const updateBat = () => {
+                let per = Math.floor(bat.level * 100);
+                $('#battery-fill').css('width', per + '%');
+                $('#battery-status').text(`${per}% // ${bat.charging ? "INPUT_ACTIVE" : "INTERNAL_CELL"}`);
+            };
+            updateBat();
+            bat.onlevelchange = updateBat;
+            bat.onchargingchange = updateBat;
+        });
+    }
+
+    updateSystems();
+});
+</script>
+</body>
+</html>
