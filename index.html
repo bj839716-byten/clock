@@ -2,15 +2,14 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NEURAL-CHRONO // 2026 PROTOCOL</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NEURAL-CHRONO // UNIVERSAL</title>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&family=JetBrains+Mono:wght@100;400&display=swap" rel="stylesheet">
     <style>
         :root {
             --accent: #00f2fe;
             --danger: #ff0055;
-            --gold: #ffcc00;
             --bg: #020205;
         }
 
@@ -24,83 +23,53 @@
             justify-content: center;
             align-items: center;
             perspective: 1200px;
+            touch-action: none; /* Prevents mobile scrolling while interacting */
         }
 
-        /* Layered Backgrounds */
-        canvas#background-canvas {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
+        canvas#bg-canvas {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             z-index: 1;
         }
 
-        /* CRT Scanline Effect Overlay */
-        .scanlines {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), 
-                        linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
-            background-size: 100% 3px, 3px 100%;
-            z-index: 100; pointer-events: none;
-        }
-
-        /* Ultra HUD Container */
+        /* Responsive HUD Container */
         #hud-frame {
             position: relative;
             z-index: 10;
-            width: 950px;
-            height: 650px;
-            background: rgba(0, 242, 254, 0.02);
+            width: 90vw;
+            max-width: 950px;
+            height: auto;
+            min-height: 60vh;
+            background: rgba(0, 242, 254, 0.03);
             border: 1px solid rgba(0, 242, 254, 0.3);
-            backdrop-filter: blur(20px);
+            backdrop-filter: blur(15px);
+            padding: 20px;
+            box-shadow: 0 0 50px rgba(0,0,0,1);
+            transform-style: preserve-3d;
             display: flex;
             flex-direction: column;
-            padding: 40px;
-            box-shadow: 0 0 100px rgba(0,0,0,1), inset 0 0 50px rgba(0, 242, 254, 0.05);
-            transform-style: preserve-3d;
-            transition: transform 0.1s ease-out;
             clip-path: polygon(0 5%, 5% 0, 95% 0, 100% 5%, 100% 95%, 95% 100%, 5% 100%, 0 95%);
         }
 
+        /* Top Bar */
         .header-row {
             display: flex;
             justify-content: space-between;
+            font-size: 0.6rem;
             border-bottom: 1px solid rgba(0, 242, 254, 0.2);
-            padding-bottom: 10px;
-            margin-bottom: 30px;
+            padding-bottom: 8px;
+            margin-bottom: 15px;
+            letter-spacing: 2px;
         }
 
-        .label {
-            font-size: 0.65rem;
-            color: var(--accent);
-            letter-spacing: 4px;
-            text-transform: uppercase;
-        }
-
-        /* Main Content Grid */
+        /* Responsive Grid */
         .main-layout {
             display: grid;
             grid-template-columns: 1fr 2fr 1fr;
-            gap: 30px;
+            gap: 15px;
             flex-grow: 1;
         }
 
-        /* Analog Clock (User Original Logic Base) */
-        .analog-mini {
-            width: 150px; height: 150px;
-            border: 2px solid rgba(255,255,255,0.1);
-            border-radius: 50%;
-            position: relative;
-            margin: 20px auto;
-        }
-        .hand {
-            position: absolute; bottom: 50%; left: 50%;
-            transform-origin: bottom center;
-            background: white; border-radius: 5px;
-        }
-        #sec-hand { width: 1px; height: 60px; background: var(--danger); z-index: 10; }
-        #min-hand { width: 3px; height: 50px; background: var(--accent); z-index: 8; }
-        #hor-hand { width: 5px; height: 35px; background: #fff; z-index: 6; }
-
-        /* Central Digital Display */
+        /* Center Digital Display */
         .center-display {
             display: flex;
             flex-direction: column;
@@ -111,254 +80,183 @@
 
         #digital-time {
             font-family: 'Orbitron', sans-serif;
-            font-size: 7rem;
+            font-size: clamp(2.5rem, 10vw, 6rem); /* Adjusts size based on screen */
             font-weight: 900;
-            color: white;
-            text-shadow: 0 0 40px var(--accent);
-            line-height: 1;
+            text-shadow: 0 0 25px var(--accent);
         }
 
         #milliseconds {
-            font-size: 2rem;
+            font-size: 1.2rem;
             color: var(--danger);
-            margin-left: 10px;
         }
 
-        /* Battery & Telemetry */
-        .status-box {
-            background: rgba(255,255,255,0.03);
-            padding: 15px;
-            border: 1px solid rgba(255,255,255,0.05);
+        /* New Year Countdown */
+        .countdown-strip {
             margin-top: 20px;
-        }
-
-        .bar-outer { width: 100%; height: 4px; background: rgba(255,255,255,0.1); margin-top: 10px; }
-        .bar-inner { height: 100%; background: var(--accent); width: 0%; box-shadow: 0 0 10px var(--accent); transition: 0.5s; }
-
-        /* Countdown Strip */
-        .new-year-strip {
-            margin-top: 40px;
-            background: linear-gradient(90deg, rgba(255,0,85,0) 0%, rgba(255,0,85,0.1) 50%, rgba(255,0,85,0) 100%);
             border-top: 1px solid var(--danger);
-            border-bottom: 1px solid var(--danger);
-            padding: 25px;
+            padding: 15px;
             text-align: center;
         }
 
         #countdown-clock {
             font-family: 'Orbitron', sans-serif;
-            font-size: 3.5rem;
+            font-size: clamp(1.2rem, 5vw, 2.5rem);
             color: var(--danger);
-            text-shadow: 0 0 20px var(--danger);
-            animation: pulse 1s infinite alternate;
+            text-shadow: 0 0 15px var(--danger);
         }
 
-        @keyframes pulse {
-            from { opacity: 0.7; transform: scale(0.98); }
-            to { opacity: 1; transform: scale(1); }
+        /* Sidebar content hide on very small phones */
+        .side-panel {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
         }
 
-        .binary-scroller {
-            font-size: 0.6rem;
-            color: rgba(255,255,255,0.2);
-            margin-top: 10px;
-            white-space: nowrap;
-            overflow: hidden;
+        /* MOBILE OPTIMIZATIONS */
+        @media (max-width: 768px) {
+            .main-layout {
+                grid-template-columns: 1fr; /* Stack into one column */
+            }
+            .side-panel {
+                text-align: center;
+                font-size: 0.7rem;
+            }
+            .analog-mini { display: none; } /* Hide analog on small mobile to save space */
+            #hud-frame { padding: 15px; }
         }
+
+        .analog-mini {
+            width: 100px; height: 100px;
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 50%;
+            position: relative;
+            margin: 10px auto;
+        }
+        .hand { position: absolute; bottom: 50%; left: 50%; transform-origin: bottom center; background: white; }
+        #sec-h { width: 1px; height: 40px; background: var(--danger); }
+        #min-h { width: 2px; height: 35px; background: var(--accent); }
+        #hor-h { width: 4px; height: 25px; background: #fff; }
     </style>
 </head>
 <body>
 
-<canvas id="background-canvas"></canvas>
-<div class="scanlines"></div>
+<canvas id="bg-canvas"></canvas>
 
 <div id="hud-frame">
     <div class="header-row">
-        <div class="label" id="system-id">CORE_OS_V4.0 // ACTIVE</div>
-        <div class="label" id="current-date-header">31 DEC 2025</div>
+        <span>SYS_STATUS: ONLINE</span>
+        <span id="header-date">-- --- ----</span>
     </div>
 
     <div class="main-layout">
         <div class="side-panel">
-            <div class="label">Mechanical Sync</div>
-            <div class="analog-mini">
-                <div class="hand" id="hor-hand"></div>
-                <div class="hand" id="min-hand"></div>
-                <div class="hand" id="sec-hand"></div>
-            </div>
-            <div class="status-box">
-                <div class="label">Power Reserve</div>
-                <div id="bat-val" style="font-size: 1.2rem;">--%</div>
-                <div class="bar-outer"><div id="bat-fill" class="bar-inner"></div></div>
-            </div>
+            <div style="color: var(--accent); font-size: 0.6rem;">ENERGY_LEVEL</div>
+            <div id="bat-text">--%</div>
+            <div id="day-text" style="margin-top: 10px;">WEDNESDAY</div>
         </div>
 
         <div class="center-display">
-            <div class="label">Precision Atomic Time</div>
-            <div style="display: flex; align-items: flex-end;">
+            <div style="display: flex; align-items: baseline;">
                 <span id="digital-time">00:00:00</span>
                 <span id="milliseconds">.000</span>
             </div>
-            <div class="binary-scroller" id="binary">010101010101010101010101</div>
+            <div class="analog-mini">
+                <div class="hand" id="hor-h"></div>
+                <div class="hand" id="min-h"></div>
+                <div class="hand" id="sec-h"></div>
+            </div>
         </div>
 
         <div class="side-panel">
-            <div class="label">Geospatial Data</div>
-            <div style="margin-top: 10px; font-size: 0.8rem;">
-                <span style="color: var(--accent);">LOC:</span> DURBAN, ZA<br>
-                <span style="color: var(--accent);">LAT:</span> -29.8587<br>
-                <span style="color: var(--accent);">LNG:</span> 31.0218
-            </div>
-            <div class="status-box" style="border-color: var(--danger);">
-                <div class="label" style="color: var(--danger);">Year Protocol</div>
-                <div id="year-status">2025 // TERMINATING</div>
-                <div class="bar-outer"><div id="year-progress" class="bar-inner" style="background: var(--danger); width: 99.9%;"></div></div>
-            </div>
+            <div style="color: var(--accent); font-size: 0.6rem;">NETWORK_LOC</div>
+            <div>DURBAN_ZA</div>
+            <div style="font-size: 0.5rem; opacity: 0.5; margin-top: 5px;">LAT: -29.85<br>LNG: 31.02</div>
         </div>
     </div>
 
-    <div class="new-year-strip">
-        <div class="label" style="border: none; color: var(--danger); margin-bottom: 5px;">T-Minus to 2026 Epoch</div>
+    <div class="countdown-strip">
+        <div style="font-size: 0.6rem; color: var(--danger); margin-bottom: 5px;">NEW YEAR PROTOCOL 2026</div>
         <div id="countdown-clock">00:00:00:00</div>
     </div>
 </div>
 
 <script>
 $(document).ready(function() {
-    const canvas = document.getElementById('background-canvas');
+    // 1. Particle Background
+    const canvas = document.getElementById('bg-canvas');
     const ctx = canvas.getContext('2d');
-    let particles = [];
-    let fireworks = [];
-
-    // 1. Initialize Canvas Environment
-    function resize() {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+    let stars = [];
+    function init() {
+        canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+        stars = [];
+        for(let i=0; i<60; i++) stars.push({x: Math.random()*canvas.width, y: Math.random()*canvas.height, s: Math.random()});
     }
-    window.addEventListener('resize', resize);
-    resize();
-
-    // 2. Fireworks System (Ultra Feature)
-    class Firework {
-        constructor() {
-            this.x = Math.random() * canvas.width;
-            this.y = canvas.height;
-            this.targetY = Math.random() * (canvas.height / 2);
-            this.color = `hsl(${Math.random() * 360}, 100%, 50%)`;
-            this.speed = 5;
-            this.particles = [];
-            this.exploded = false;
-        }
-        update() {
-            if (!this.exploded) {
-                this.y -= this.speed;
-                if (this.y <= this.targetY) {
-                    this.exploded = true;
-                    for(let i=0; i<30; i++) this.particles.push(new Spark(this.x, this.y, this.color));
-                }
-            } else {
-                this.particles.forEach((p, i) => {
-                    p.update();
-                    if (p.alpha <= 0) this.particles.splice(i, 1);
-                });
-            }
-        }
-        draw() {
-            if (!this.exploded) {
-                ctx.fillStyle = this.color;
-                ctx.fillRect(this.x, this.y, 3, 3);
-            } else {
-                this.particles.forEach(p => p.draw());
-            }
-        }
+    function draw() {
+        ctx.fillStyle = '#020205'; ctx.fillRect(0,0,canvas.width, canvas.height);
+        ctx.fillStyle = 'rgba(0, 242, 254, 0.4)';
+        stars.forEach(s => {
+            ctx.beginPath(); ctx.arc(s.x, s.y, s.s, 0, Math.PI*2); ctx.fill();
+            s.y -= 0.2; if(s.y < 0) s.y = canvas.height;
+        });
+        requestAnimationFrame(draw);
     }
+    init(); draw();
+    window.addEventListener('resize', init);
 
-    class Spark {
-        constructor(x, y, color) {
-            this.x = x; this.y = y; this.color = color;
-            this.vx = (Math.random() - 0.5) * 6;
-            this.vy = (Math.random() - 0.5) * 6;
-            this.alpha = 1;
-        }
-        update() { this.x += this.vx; this.y += this.vy; this.alpha -= 0.01; }
-        draw() {
-            ctx.globalAlpha = this.alpha;
-            ctx.fillStyle = this.color;
-            ctx.beginPath(); ctx.arc(this.x, this.y, 2, 0, Math.PI*2); ctx.fill();
-            ctx.globalAlpha = 1;
-        }
-    }
-
-    // 3. 3D Mouse Parallax
-    $(document).on('mousemove', function(e) {
-        let x = -(window.innerWidth / 2 - e.pageX) / 60;
-        let y = (window.innerHeight / 2 - e.pageY) / 60;
+    // 2. Interactive Parallax (Mouse & Touch)
+    function handleMove(e) {
+        let pageX = e.pageX || e.originalEvent.touches[0].pageX;
+        let pageY = e.pageY || e.originalEvent.touches[0].pageY;
+        let x = -(window.innerWidth / 2 - pageX) / 50;
+        let y = (window.innerHeight / 2 - pageY) / 50;
         $('#hud-frame').css('transform', `rotateY(${x}deg) rotateX(${y}deg)`);
-    });
+    }
+    $(document).on('mousemove touchmove', handleMove);
 
-    // 4. Core Logic Loop
+    // 3. Main Loop
     function update() {
         const now = new Date();
+        const h = now.getHours(), m = now.getMinutes(), s = now.getSeconds(), ms = now.getMilliseconds();
         
-        // --- YOUR ORIGINAL LOGIC (Enhanced) ---
-        const s = now.getSeconds();
-        const m = now.getMinutes();
-        const h = now.getHours();
-        const ms = now.getMilliseconds();
+        // Digital & Analog (User's Original Logic included)
+        $('#digital-time').text(`${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`);
+        $('#milliseconds').text(`.${String(ms).padStart(3,'0')}`);
+        
+        $("#sec-h").css("transform", `rotate(${s * 6}deg)`);
+        $("#min-h").css("transform", `rotate(${m * 6}deg)`);
+        $("#hor-h").css("transform", `rotate(${(h % 12) * 30 + m / 2}deg)`);
 
-        // Analog rotations
-        $("#sec-hand").css("transform", `rotate(${s * 6}deg)`);
-        $("#min-hand").css("transform", `rotate(${m * 6}deg)`);
-        $("#hor-hand").css("transform", `rotate(${(h % 12) * 30 + m / 2}deg)`);
+        // Header Date
+        const days = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+        const months = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+        $('#header-date').text(`${now.getDate()} ${months[now.getMonth()]} ${now.getFullYear()}`);
+        $('#day-text').text(days[now.getDay()]);
 
-        // --- ULTRA DIGITAL INTERFACE ---
-        $('#digital-time').text(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`);
-        $('#milliseconds').text(`.${String(ms).padStart(3, '0')}`);
-        $('#current-date-header').text(now.toDateString().toUpperCase());
-        $('#binary').text(now.getTime().toString(2));
-
-        // --- NEW YEAR COUNTDOWN ---
-        const target = new Date("Jan 1, 2026 00:00:00").getTime();
-        const diff = target - now.getTime();
-
-        if (diff > 0) {
-            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-            const secs = Math.floor((diff % (1000 * 60)) / 1000);
-            $('#countdown-clock').text(`${String(days).padStart(2, '0')}:${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`);
+        // Countdown
+        const diff = new Date("Jan 1, 2026 00:00:00") - now;
+        if(diff > 0) {
+            const days = Math.floor(diff / 86400000);
+            const hours = Math.floor((diff % 86400000) / 3600000);
+            const mins = Math.floor((diff % 3600000) / 60000);
+            const secs = Math.floor((diff % 60000) / 1000);
+            $('#countdown-clock').text(`${days}D:${String(hours).padStart(2,'0')}H:${String(mins).padStart(2,'0')}M:${String(secs).padStart(2,'0')}S`);
         } else {
-            // NEW YEAR TRIGGER
-            $('#countdown-clock').text("WELCOME TO 2026").css('color', 'var(--accent)');
-            if (Math.random() < 0.05) fireworks.push(new Firework()); // Launch fireworks
+            $('#countdown-clock').text("2026 PROTOCOL: ACTIVE").css('color', 'var(--accent)');
         }
-
-        // --- BACKGROUND ANIMATION ---
-        ctx.fillStyle = 'rgba(2, 2, 5, 0.2)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        fireworks.forEach((fw, i) => {
-            fw.update(); fw.draw();
-            if (fw.exploded && fw.particles.length === 0) fireworks.splice(i, 1);
-        });
 
         requestAnimationFrame(update);
     }
 
-    // 5. Battery Telemetry
-    if (navigator.getBattery) {
-        navigator.getBattery().then(bat => {
-            const up = () => {
-                let p = Math.floor(bat.level * 100);
-                $('#bat-val').text(p + '%');
-                $('#bat-fill').css('width', p + '%');
-            };
-            up(); bat.onlevelchange = up;
+    // 4. Battery
+    if(navigator.getBattery) {
+        navigator.getBattery().then(b => {
+            const u = () => $('#bat-text').text(Math.floor(b.level * 100) + '%');
+            u(); b.onlevelchange = u;
         });
     }
 
     update();
 });
 </script>
-
 </body>
 </html>
